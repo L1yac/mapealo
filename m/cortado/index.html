@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Cortado · Instrucción de trabajo</title>
+<style>
+  :root{
+    --azul:#2a66db; --violeta:#6633e0; --navy:#0b0b33;
+    --grad:linear-gradient(100deg,#2a66db,#6633e0);
+    --papel:#ffffff; --fondo:#f1f1f8; --linea:#d8d8e6; --apag:#5a5f7d;
+    --lila:#f2f0fe; --ambar:#b57d00; --ambar-f:#fdf3dc;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+    background:var(--fondo);color:var(--navy);line-height:1.5;font-size:16px;}
+  .caja{max-width:680px;margin:0 auto;padding:0 0 50px;}
+
+  .barra{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:9px;}
+  .barra svg{width:24px;height:24px;flex:0 0 auto;}
+  .barra b{font-size:15px;} .barra span{font-size:13.5px;opacity:.7;margin-left:auto;}
+
+  .cabecera{background:var(--papel);padding:20px 16px 18px;border-bottom:1px solid var(--linea);}
+  h1{font-size:27px;margin:0 0 3px;letter-spacing:-.7px;line-height:1.12;}
+  .modelo{font-size:17px;color:var(--apag);margin:0 0 12px;}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{background:var(--lila);border:1.5px solid var(--violeta);color:var(--violeta);
+    border-radius:999px;padding:4px 11px;font-size:13.5px;font-weight:800;}
+  .chip.hueco{background:#fff;border-style:dashed;border-color:var(--ambar);color:var(--ambar);}
+
+  section{background:var(--papel);margin-top:12px;padding:18px 16px;
+    border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);}
+  h2{font-size:12.5px;font-weight:900;letter-spacing:1.6px;text-transform:uppercase;
+    color:var(--apag);margin:0 0 12px;}
+
+  .estado{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .estado div{background:var(--fondo);border-radius:9px;padding:10px 12px;}
+  .estado .e{font-size:12px;color:var(--apag);font-weight:700;text-transform:uppercase;
+    letter-spacing:.8px;margin-bottom:2px;}
+  .estado .v{font-size:16px;font-weight:800;}
+  .estado .v.pend{color:var(--ambar);}
+
+  .acciones{display:flex;flex-direction:column;gap:10px;}
+  a.btn{display:flex;align-items:center;justify-content:center;gap:9px;min-height:58px;
+    border-radius:10px;text-decoration:none;font-size:18px;font-weight:800;padding:12px 16px;}
+  a.btn.pri{background:var(--grad);color:#fff;}
+  a.btn.sec{background:var(--papel);color:var(--navy);border:2.5px solid var(--navy);}
+
+  video{width:100%;display:block;border-radius:10px;background:#000;margin-bottom:12px;}
+  .marca-t{display:flex;align-items:center;gap:11px;width:100%;padding:10px 12px;
+    background:var(--papel);border:2px solid var(--linea);border-radius:9px;text-align:left;
+    font:inherit;cursor:pointer;margin-bottom:7px;color:var(--navy);}
+  .marca-t:active{border-color:var(--violeta);background:var(--lila);}
+  .marca-t .t{font-family:"Courier New",monospace;font-size:14.5px;font-weight:700;
+    color:var(--violeta);width:42px;flex:0 0 auto;}
+  .marca-t .d{font-size:15.5px;font-weight:700;}
+
+  ul.enlaces{list-style:none;margin:0;padding:0;}
+  ul.enlaces a{display:flex;align-items:center;gap:11px;padding:13px;background:var(--papel);
+    border:2px solid var(--linea);border-radius:10px;text-decoration:none;color:var(--navy);}
+  ul.enlaces .ic{width:38px;height:38px;border-radius:8px;background:var(--lila);
+    border:2px solid var(--violeta);flex:0 0 auto;display:flex;align-items:center;
+    justify-content:center;font-size:17px;}
+  ul.enlaces b{display:block;font-size:16px;}
+  ul.enlaces span{font-size:13.5px;color:var(--apag);}
+
+  .nota{background:var(--ambar-f);border-left:5px solid var(--ambar);border-radius:0 8px 8px 0;
+    padding:11px 13px;font-size:14px;line-height:1.45;}
+  .nota b{color:var(--ambar);display:block;margin-bottom:2px;}
+  .clausula{display:inline-block;background:var(--fondo);border:1px solid var(--linea);
+    border-radius:6px;padding:2px 8px;font-size:12px;font-weight:800;color:var(--apag);margin-left:6px;}
+
+  .pie{text-align:center;padding:24px 16px;color:var(--apag);font-size:13px;}
+  .pie .m{display:inline-flex;align-items:center;gap:6px;font-weight:800;color:var(--navy);}
+  .pie .m svg{width:18px;height:18px;}
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <svg viewBox="0 0 100 100" aria-hidden="true">
+    <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5b8ce8"/><stop offset="1" stop-color="#a184f5"/></linearGradient></defs>
+    <path d="M20 86 L20 30 L50 70 L80 30 L80 86" fill="none" stroke="url(#g1)"
+      stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="20" cy="86" r="9" fill="#0b0b33" stroke="url(#g1)" stroke-width="6.5"/>
+    <circle cx="50" cy="70" r="9" fill="#0b0b33" stroke="url(#g1)" stroke-width="6.5"/>
+    <circle cx="80" cy="86" r="9" fill="#0b0b33" stroke="url(#g1)" stroke-width="6.5"/>
+  </svg>
+  <b>Instrucción de trabajo</b><span>PEDRO INIESTA S.A.</span>
+</div>
+
+<div class="caja">
+  <div class="cabecera">
+    <h1>Cortado</h1>
+    <p class="modelo">ATOM FLASHCUT · Proceso de producción · 9 pasos</p>
+    <div class="chips">
+      <span class="chip">Sección: Cortado</span>
+      <span class="chip hueco">Código IT-PROC — pendiente</span>
+    </div>
+  </div>
+
+  <section>
+    <h2>Estado del documento <span class="clausula">ISO 9001 · 7.5</span></h2>
+    <div class="estado">
+      <div><div class="e">Edición</div><div class="v">01 · 15/08/2026</div></div>
+      <div><div class="e">Aprobado por</div><div class="v pend">Pendiente</div></div>
+      <div><div class="e">Primera operación</div><div class="v">antes de CL-103</div></div>
+      <div><div class="e">Datos pendientes</div><div class="v pend">6 sin cerrar</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>La instrucción</h2>
+    <div class="acciones">
+      <a class="btn pri" href="manual.pdf">⤓ Ver la instrucción en PDF</a>
+      <a class="btn sec" href="manual.html">Verla en pantalla</a>
+    </div>
+  </section>
+
+  <section>
+    <h2>El operario haciéndolo</h2>
+    <video id="v" controls playsinline preload="none" src="video.mp4"></video>
+    <p style="font-size:14px;color:var(--apag);margin:0 0 12px;">
+      Toca un paso y el vídeo salta a ese momento.</p>
+    <div id="marcadores"></div>
+  </section>
+
+  <section>
+    <h2>En qué máquina se hace</h2>
+    <ul class="enlaces">
+      <li><a href="../"><span class="ic">⚙</span>
+        <span><b>ATOM FLASHCUT</b><span>Mesa de corte con proyección · 3 mandos sin describir</span></span></a></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Lo que falta por cerrar</h2>
+    <div class="nota">
+      <b>Faltan 6 datos y uno es crítico.</b>
+      En el paso 5 el operario dice que la proyección «no es real» y que la línea «tiene que estar
+      más o menos aquí», sin dar referencia ni tolerancia. Es el control que evita cortar mal todo
+      el material. Tampoco están descritos tres mandos de la botonera, ni con qué mando se lanza el
+      corte, ni de qué documento se leen las cantidades. Los tiene que cerrar el Responsable de Calidad.
+    </div>
+  </section>
+
+  <div class="pie">
+    <div class="m">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <defs><linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#2a66db"/><stop offset="1" stop-color="#6633e0"/></linearGradient></defs>
+        <path d="M20 86 L20 30 L50 70 L80 30 L80 86" fill="none" stroke="url(#g2)"
+          stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="20" cy="86" r="9" fill="#fff" stroke="url(#g2)" stroke-width="6.5"/>
+        <circle cx="50" cy="70" r="9" fill="#fff" stroke="url(#g2)" stroke-width="6.5"/>
+        <circle cx="80" cy="86" r="9" fill="#fff" stroke="url(#g2)" stroke-width="6.5"/>
+      </svg> mapealo
+    </div>
+    <p style="margin:6px 0 0;">Generada a partir de una grabación en planta del 15/08/2026.<br>
+      Documento en borrador, pendiente de aprobación.</p>
+  </div>
+</div>
+
+<script>
+var PASOS = [
+  {s:12, t:"Abrir el programa del modelo"},
+  {s:64, t:"Seleccionar piezas y cantidades"},
+  {s:90, t:"Colocar el material en la mesa"},
+  {s:129, t:"Encajar las piezas proyectadas"},
+  {s:203, t:"Comprobar la proyección antes de cortar"},
+  {s:240, t:"Activar la aspiración"},
+  {s:285, t:"Dar el corte"},
+  {s:332, t:"Ajustar la cuchilla / repasar"},
+  {s:380, t:"Identificar y entregar"}
+];
+var v = document.getElementById("v");
+document.getElementById("marcadores").innerHTML = PASOS.map(function(p,i){
+  var mm = Math.floor(p.s/60), ss = String(p.s%60).padStart(2,"0");
+  return '<button class="marca-t" data-s="'+p.s+'"><span class="t">'+mm+':'+ss+'</span>' +
+         '<span class="d">'+(i+1)+'. '+p.t+'</span></button>';
+}).join("");
+document.querySelectorAll(".marca-t").forEach(function(b){
+  b.addEventListener("click", function(){
+    v.currentTime = +b.dataset.s; v.play();
+    v.scrollIntoView({behavior:"smooth", block:"center"});
+  });
+});
+</script>
+</body>
+</html>
