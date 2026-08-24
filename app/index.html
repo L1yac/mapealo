@@ -811,6 +811,41 @@
     letter-spacing:.5px;text-transform:uppercase;}
 
   /* --- papelera --- */
+  /* ---- acciones de un documento (⋯) ---- */
+  .doc .mas{position:absolute;top:50%;right:8px;transform:translateY(-50%);width:38px;height:38px;
+    display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:22px;
+    line-height:1;color:var(--suave);background:transparent;cursor:pointer;}
+  .doc .mas:active{background:var(--lila-claro);color:var(--violeta);}
+  .carpeta .lapiz{width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+    border-radius:9px;font-size:17px;color:var(--suave);cursor:pointer;margin-left:6px;}
+  .carpeta .lapiz:active{background:var(--lila-claro);color:var(--violeta);}
+  .carpeta .cic.mas{background:transparent;border:2px dashed var(--linea);display:flex;
+    align-items:center;justify-content:center;font-size:24px;font-weight:800;color:var(--suave);}
+  .carpeta .cic.mas::before{display:none;}
+  /* ---- hoja de opciones (sube desde abajo) ---- */
+  .hoja{position:fixed;inset:0;background:rgba(11,11,51,.6);z-index:85;display:none;
+    align-items:flex-end;justify-content:center;padding:0;}
+  .hoja.on{display:flex;}
+  .hoja .caja{background:var(--papel);border-radius:16px 16px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom));
+    width:100%;max-width:460px;max-height:82vh;overflow:auto;}
+  .hoja h3{font-size:19px;margin:0 0 4px;letter-spacing:-.4px;line-height:1.2;}
+  .hoja > .caja > p{font-size:14.5px;color:var(--suave);margin:0 0 14px;line-height:1.4;}
+  .op-hoja{display:flex;align-items:center;gap:12px;width:100%;padding:13px 12px;margin-bottom:9px;
+    background:var(--papel);border:1px solid var(--linea);border-radius:11px;text-align:left;
+    cursor:pointer;font:inherit;}
+  .op-hoja:active{border-color:var(--violeta);background:var(--lila-claro);}
+  .op-hoja .ic{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--lila-claro);
+    display:flex;align-items:center;justify-content:center;font-size:17px;}
+  .op-hoja b{display:block;font-size:16.5px;line-height:1.2;color:var(--tinta);}
+  .op-hoja span{display:block;font-size:13.5px;color:var(--suave);line-height:1.3;}
+  .op-hoja.sel{border-color:var(--violeta);background:var(--lila-claro);}
+  .op-hoja.roja b{color:var(--rojo);}
+  /* ---- vista previa de la marca ---- */
+  .prev-marca{border:1px solid var(--linea);border-radius:11px;overflow:hidden;margin-top:6px;}
+  .prev-marca .cab-prev{padding:10px 12px;color:#fff;font-weight:800;font-size:14px;
+    display:flex;justify-content:space-between;gap:10px;}
+  .prev-marca .cuerpo-prev{padding:11px 12px;font-size:13.5px;color:var(--tinta);background:#fff;}
+  .prev-marca .cuerpo-prev b{display:block;font-size:15px;margin-bottom:3px;}
   .borrado{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--linea);
     border-radius:14px;padding:13px 14px;margin-bottom:10px;}
   .borrado .tx{flex:1;min-width:0;}
@@ -1341,19 +1376,35 @@
       <p class="ayuda">Esto se aplica a todos los manuales que genera la app. Los documentos
       tienen que parecer vuestros, no nuestros.</p>
       <label class="campo"><span class="et">Razón social (sale en la cabecera)</span>
-        <input class="txt" id="mkNombre" type="text"></label>
+        <input class="txt" id="mkNombre" type="text" oninput="pintarPrevioMarca()"></label>
       <label class="campo"><span class="et">Logo</span>
         <input type="file" id="ficheroLogo" accept="image/*" hidden onchange="logoElegido(this)">
         <button class="btn btn-blanco btn-chico" onclick="document.getElementById('ficheroLogo').click()"
           id="btnLogo">SUBIR EL LOGO</button></label>
       <label class="campo"><span class="et">Color corporativo</span>
-        <input class="txt" id="mkColor" type="color" style="height:52px;padding:5px;"></label>
+        <div style="display:flex;gap:9px;align-items:center;">
+          <input class="txt" id="mkColor" type="color" style="height:52px;padding:5px;width:74px;flex:0 0 auto;"
+            oninput="colorDesdeRueda()">
+          <input class="txt" id="mkHex" type="text" inputmode="text" autocapitalize="characters"
+            spellcheck="false" placeholder="#0B0B33" maxlength="7" style="flex:1;text-transform:uppercase;"
+            oninput="colorDesdeCodigo()">
+        </div></label>
+      <p class="pista">Si tenéis manual de marca, escribid aquí el código exacto (#RRGGBB).
+      La rueda es para cuando no lo tenéis a mano.</p>
       <label class="campo"><span class="et">Tipografía de los documentos</span>
-        <select class="txt" id="mkLetra">
+        <select class="txt" id="mkLetra" onchange="letraCambiada()">
           <option value="serif">Con remates (tipo Times) — la más habitual en ISO</option>
           <option value="sans">Sin remates (tipo Arial)</option>
           <option value="mono">De máquina de escribir</option>
+          <option value="otra">La nuestra — escribo el nombre</option>
         </select></label>
+      <label class="campo" id="campoLetraOtra" style="display:none;">
+        <span class="et">Nombre de vuestra tipografía</span>
+        <input class="txt" id="mkLetraOtra" type="text" spellcheck="false"
+          placeholder="Helvetica Neue, Futura, Gotham…" oninput="pintarPrevioMarca()"></label>
+      <p class="pista" id="pistaLetraOtra" style="display:none;">Si esa letra no está instalada en el
+      móvil o en el ordenador que abre el manual, se ve la de repuesto. Para que salga siempre igual
+      hay que subirnos el fichero de la fuente: pídenoslo y la dejamos cargada en vuestra cuenta.</p>
       <label class="campo"><span class="et">Idioma de los manuales</span>
         <select class="txt" id="mkIdioma">
           <option value="es">Español</option>
@@ -1364,6 +1415,8 @@
           <option value="ar">العربية</option>
         </select></label>
       <p class="pista">El idioma cambia el documento escrito, no el vídeo.</p>
+      <p class="seccion-tit">Cómo va a salir</p>
+      <div class="prev-marca" id="prevMarca"></div>
     </div>
     <div class="pie">
       <button class="btn btn-marca" onclick="guardarMarca()">GUARDAR</button>
@@ -1880,6 +1933,29 @@
     </div>
   </div>
 </div>
+<div class="modal" id="modalIn">
+  <div class="caja">
+    <h3 id="miTitulo"></h3>
+    <p id="miTexto"></p>
+    <label class="campo" style="margin-bottom:14px;">
+      <input class="txt" id="miCampo" type="text" autocomplete="off"></label>
+    <div class="bots">
+      <button class="btn btn-marca btn-chico" id="miOk">Guardar</button>
+      <button class="btn btn-blanco btn-chico" onclick="cerrarTexto()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="hoja" id="hoja" onclick="cerrarHoja(event)">
+  <div class="caja" onclick="event.stopPropagation()">
+    <h3 id="hoTitulo"></h3>
+    <p id="hoTexto"></p>
+    <div id="hoOpciones"></div>
+    <div style="height:4px"></div>
+    <button class="btn btn-blanco btn-chico" onclick="cerrarHoja(true)">Cancelar</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div class="visor-img" id="visorImg" onclick="cerrarImagen(event)">
@@ -2126,6 +2202,64 @@ function preguntar(titulo, texto, textoOk, alConfirmar){
 }
 function cerrarDialogo(){ document.getElementById("modal").classList.remove("on"); }
 
+/* Pedir un texto (nombre de carpeta, renombrar…). El navegador trae prompt(),
+   pero en Android sale con la cara del navegador y rompe la ilusión de app.
+   Además prompt() bloquea el hilo y mata la cámara si está encendida. */
+function pedirTexto(titulo, texto, valor, textoOk, alGuardar){
+  document.getElementById("miTitulo").textContent = titulo;
+  document.getElementById("miTexto").textContent  = texto;
+  const campo = document.getElementById("miCampo");
+  campo.value = valor || "";
+  const ok = document.getElementById("miOk");
+  ok.textContent = textoOk;
+  ok.onclick = function(){
+    const v = (campo.value || "").trim();
+    cerrarTexto();
+    alGuardar(v);
+  };
+  campo.onkeydown = function(ev){ if (ev.key === "Enter"){ ev.preventDefault(); ok.click(); } };
+  document.getElementById("modalIn").classList.add("on");
+  setTimeout(function(){ campo.focus(); campo.select(); }, 60);
+}
+function cerrarTexto(){ document.getElementById("modalIn").classList.remove("on"); }
+
+/* Hoja de opciones que sube desde abajo: es donde caben "mover" y "duplicar"
+   sin llenar la tarjeta de botones que el pulgar no acierta. */
+let HOJA_ACC = [];
+function abrirHoja(titulo, texto, opciones){
+  HOJA_ACC = opciones.map(function(o){ return o.f; });
+  document.getElementById("hoTitulo").textContent = titulo;
+  const p = document.getElementById("hoTexto");
+  p.textContent = texto || ""; p.style.display = texto ? "" : "none";
+  document.getElementById("hoOpciones").innerHTML = opciones.map(function(o, i){
+    return '<button class="op-hoja ' + (o.clase || "") + '" onclick="hojaElegir(' + i + ')">' +
+      '<div class="ic">' + o.ic + '</div><div style="flex:1;min-width:0"><b>' + esc(o.t) + '</b>' +
+      (o.s ? '<span>' + esc(o.s) + '</span>' : "") + '</div></button>';
+  }).join("");
+  document.getElementById("hoja").classList.add("on");
+}
+function cerrarHoja(ev){
+  if (ev === true || !ev || ev.target.id === "hoja")
+    document.getElementById("hoja").classList.remove("on");
+}
+function hojaElegir(i){
+  const f = HOJA_ACC[i];
+  cerrarHoja(true);
+  if (f) setTimeout(f, 60);
+}
+function hayCapaAbierta(){
+  return document.getElementById("modal").classList.contains("on")
+      || document.getElementById("modalIn").classList.contains("on")
+      || document.getElementById("hoja").classList.contains("on")
+      || document.getElementById("visorImg").classList.contains("abierto");
+}
+function cerrarCapaAbierta(){
+  if (document.getElementById("hoja").classList.contains("on")){ cerrarHoja(true); return; }
+  if (document.getElementById("modalIn").classList.contains("on")){ cerrarTexto(); return; }
+  if (document.getElementById("modal").classList.contains("on")){ cerrarDialogo(); return; }
+  document.getElementById("visorImg").classList.remove("abierto");
+}
+
 /* ---------------- navegación ---------------- */
 function ir(id){
   document.querySelectorAll(".pantalla").forEach(s => s.classList.remove("activa"));
@@ -2149,6 +2283,79 @@ function ir(id){
   pintarBarraInferior(id);
   pintarCurro(id);
 }
+/* ============================================================
+   EL BOTÓN ATRÁS DE ANDROID
+   Ale, tras la demo: "que se pueda volver atrás desde los botones del
+   teléfono". Una app de una sola página no recibe el gesto de atrás: Android
+   lo manda como 'popstate' y, si nadie lo recoge, se sale de la app entera.
+   Lo que se hace aquí: dejar siempre UN estado en la pila del navegador y, en
+   cuanto Android lo saca, gastarlo en la vuelta atrás que corresponda y volver
+   a ponerlo. Por eso no hay que empujar un estado por pantalla: la app ya sabe
+   de dónde viene cada una (volverA, volverCarpeta, raíz de cada sección).
+   Reglas:
+   · Si hay un diálogo o una hoja abierta, atrás la cierra (y nada más).
+   · En una pantalla con botón Atrás visible, atrás hace LO MISMO que ese botón.
+     Así, salir de una grabación sigue preguntando antes de tirar el vídeo.
+   · Mientras se procesa o se lee la chapa, atrás no hace nada: no se puede
+     perder por un gesto un trabajo que ya está subiendo.
+   · En una pantalla raíz, la primera pulsación avisa y la segunda sale.
+   ============================================================ */
+const ATRAS_ESPECIAL = {
+  /* raíces: de aquí se sale de la app, no se navega */
+  "p-login":  "salir",
+  "p-inicio": "salir",   /* su botón de la barra es "Salir" (cerrar sesión), no "atrás" */
+  "p-panel":  "salir",
+  "p-fabrica":"salir",
+  /* trabajos en marcha: atrás no puede tirarlos */
+  "p-procesando":  "espera",
+  "p-analizando":  "espera",
+  "p-chapa-leyendo":"espera",
+  /* pantallas sin barra propia */
+  "p-repaso": function(){ volverAGrabar(); },
+  "p-listo":  function(){ volverInicio(); }
+};
+let avisoSalida = 0;
+
+function dejarEstado(){ try{ history.pushState({mapealo:1}, ""); }catch(e){} }
+
+function atrasDelSistema(){
+  if (hayCapaAbierta()){ cerrarCapaAbierta(); return true; }
+
+  const activa = document.querySelector(".pantalla.activa");
+  const id = activa ? activa.id : "";
+  const esp = ATRAS_ESPECIAL[id];
+
+  if (typeof esp === "function"){ esp(); return true; }
+  if (esp === "espera"){ aviso("Espera a que termine. No se pierde nada."); return true; }
+  if (esp !== "salir"){
+    /* el botón de la barra, si está puesto y se ve */
+    const b = activa && activa.querySelector(".barra .atras");
+    if (b && b.offsetParent !== null){ b.click(); return true; }
+    /* pantalla sin salida conocida: al menos, a su raíz */
+    if (usuario){ volverInicio(); return true; }
+  }
+
+  /* raíz: dos pulsaciones para salir */
+  const ahora = Date.now();
+  if (ahora - avisoSalida < 2600) return false;   /* la segunda: dejarla salir */
+  avisoSalida = ahora;
+  aviso("Pulsa otra vez para salir de Mapealo.");
+  return true;
+}
+
+window.addEventListener("popstate", function(){
+  if (atrasDelSistema()) dejarEstado();      /* consumido: la pila vuelve a tener uno */
+  else { avisoSalida = 0; try{ history.back(); }catch(e){} }
+});
+
+/* Un ordenador tiene teclado: Escape hace de atrás. Cuesta una línea y
+   Miguel revisa sentado. */
+document.addEventListener("keydown", function(ev){
+  if (ev.key !== "Escape") return;
+  if (hayCapaAbierta()){ cerrarCapaAbierta(); return; }
+  atrasDelSistema();
+});
+
 function volverInicio(){
   if (usuario && usuario.rol === "calidad"){ raiz("p-panel"); }
   else { pintarAvisoOperario(); ir("p-inicio"); }
@@ -3098,8 +3305,9 @@ function pintarAjSecciones(){
       <div class="ic" style="font-size:20px">📁</div>
       <div class="tx"><b>${esc(sec)}</b>
         <span>${n ? n + (n === 1 ? " manual" : " manuales") : "Sin manuales todavía"}</span></div>
+      <button class="recuperar" style="background:var(--azul)" onclick="renombrarCarpeta('"+escJs(sec)+"')">Renombrar</button>
       ${enUso ? '<span class="chip ok">En uso</span>'
-              : '<button class="recuperar" style="background:var(--rojo)" onclick="quitarSeccion(\''+sec+'\')">Quitar</button>'}
+              : '<button class="recuperar" style="background:var(--rojo);margin-left:6px" onclick="quitarSeccion(\''+escJs(sec)+'\')">Quitar</button>'}
     </div>`;
   }).join("");
 }
@@ -3113,16 +3321,277 @@ function anadirSeccion(){
   }
   SECCIONES.push(v);
   campo.value = "";
-  pintarAjSecciones(); pintarSecciones();
+  repintarCarpetas();
   aviso(v + " añadida.");
 }
 
 function quitarSeccion(sec){
   const i = SECCIONES.indexOf(sec);
   if (i < 0) return;
+  if (manualesDe(sec).length || maquinasDe(sec).length){
+    aviso("Primero saca lo que hay dentro."); return;
+  }
   SECCIONES.splice(i, 1);
-  pintarAjSecciones(); pintarSecciones();
+  repintarCarpetas();
   aviso(sec + " quitada.");
+}
+
+/* ============================================================
+   CARPETAS: CREARLAS Y EDITARLAS DONDE ESTÁN LOS MANUALES
+   Ale, tras la demo: "crear y editar carpetas en la misma pantalla de
+   manuales". Antes solo se podían tocar en Configuración › Secciones, tres
+   toques lejos de donde se ve el problema. Las funciones de ahí siguen
+   existiendo: las dos pantallas pintan las mismas carpetas y llaman aquí.
+   ============================================================ */
+/* Los nombres de carpeta los escribe el cliente y aquí hay valenciano:
+   "L'Alcúdia" rompería el onclick si solo se escapa el HTML. */
+function escJs(t){
+  return esc(String(t == null ? "" : t).replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
+}
+function manualesDe(sec){
+  return MANUALES.filter(function(m){ return m.familia === "proceso" && m.seccion === sec; });
+}
+function maquinasDe(sec){
+  return MAQUINAS.filter(function(q){ return q.seccion === sec; });
+}
+
+/* una fila de carpeta, con o sin lápiz de editar */
+function filaCarpeta(sec, editable){
+  const n = manualesDe(sec).length;
+  const lapiz = editable
+    ? `<span class="lapiz" role="button" tabindex="0" aria-label="Editar ${esc(sec)}"
+         onclick="event.stopPropagation();event.preventDefault();editarCarpeta('${escJs(sec)}')">✎</span>`
+    : "";
+  return `<button class="carpeta" onclick="abrirCarpeta('${escJs(sec)}')">
+    <div class="cic ${n ? "" : "vacia"}"></div>
+    <div style="flex:1;min-width:0"><b>${esc(sec)}</b>
+      <span>${n ? n + (n === 1 ? " manual" : " manuales") : "Sin manuales todavía"}</span></div>
+    <div class="cuenta ${n ? "" : "cero"}">${n}</div>${lapiz}</button>`;
+}
+function botonNuevaCarpeta(){
+  return `<button class="carpeta" onclick="nuevaCarpeta()">
+    <div class="cic mas">+</div>
+    <div><b>Nueva carpeta</b><span>Una sección más de la planta</span></div></button>`;
+}
+
+function nuevaCarpeta(){
+  pedirTexto("Nueva carpeta",
+    "Ponle el nombre que usáis en la planta. Es la sección donde caerán los manuales de proceso.",
+    "", "Crear carpeta", function(v){
+      if (!v){ aviso("La carpeta necesita un nombre."); return; }
+      if (SECCIONES.some(function(x){ return x.toLowerCase() === v.toLowerCase(); })){
+        aviso("Esa carpeta ya existe."); return;
+      }
+      SECCIONES.push(v);
+      repintarCarpetas();
+      aviso(v + " creada.");
+    });
+}
+
+function editarCarpeta(sec){
+  const n = manualesDe(sec).length, q = maquinasDe(sec).length;
+  abrirHoja(sec,
+    (n ? n + (n === 1 ? " manual dentro" : " manuales dentro") : "Vacía") +
+    (q ? " · " + q + (q === 1 ? " máquina" : " máquinas") + " en esta sección" : ""),
+    [
+      {ic:"✎", t:"Cambiar el nombre",
+       s:"Se cambia también en la cabecera de sus manuales.",
+       f:function(){ renombrarCarpeta(sec); }},
+      {ic:"🗑", t:"Borrar la carpeta", clase:"roja",
+       s: n || q ? "Antes hay que vaciarla." : "Está vacía: se puede quitar.",
+       f:function(){ borrarCarpeta(sec); }}
+    ]);
+}
+
+function renombrarCarpeta(sec){
+  pedirTexto("Cambiar el nombre", "SECCIÓN: sale en la cabecera de cada manual de esta carpeta.",
+    sec, "Guardar", function(v){
+      if (!v || v === sec) return;
+      if (SECCIONES.some(function(x){ return x.toLowerCase() === v.toLowerCase(); })){
+        aviso("Ya hay una carpeta con ese nombre."); return;
+      }
+      const i = SECCIONES.indexOf(sec);
+      if (i >= 0) SECCIONES[i] = v;
+      /* la sección es un dato del documento: cambiarla es una edición y queda apuntada */
+      manualesDe(sec).forEach(function(m){
+        m.seccion = v;
+        apuntarCambio(m, "Sección: " + sec + " → " + v);
+        EDICIONES.guardar(m);
+      });
+      MAQUINAS.forEach(function(q){ if (q.seccion === sec) q.seccion = v; });
+      repintarCarpetas(); pintarMaquinas(); pintarPanel();
+      aviso("Ahora se llama " + v + ".");
+    });
+}
+
+function borrarCarpeta(sec){
+  const n = manualesDe(sec).length, q = maquinasDe(sec).length;
+  if (n || q){
+    aviso("Primero saca lo que hay dentro: " +
+      (n ? n + (n === 1 ? " manual" : " manuales") : "") +
+      (n && q ? " y " : "") + (q ? q + (q === 1 ? " máquina" : " máquinas") : "") + ".");
+    return;
+  }
+  preguntar("¿Borrar la carpeta " + sec + "?",
+    "Está vacía, así que no se pierde ningún documento. Puedes volver a crearla cuando quieras.",
+    "Borrar la carpeta", function(){
+      const i = SECCIONES.indexOf(sec);
+      if (i >= 0) SECCIONES.splice(i, 1);
+      repintarCarpetas();
+      aviso(sec + " borrada.");
+    });
+}
+
+/* las carpetas se ven en tres sitios: que no se queden desfasadas */
+function repintarCarpetas(){
+  if (document.getElementById("listaSecciones")) pintarSecciones();
+  if (document.getElementById("listaAjSecciones")) pintarAjSecciones();
+  if (document.getElementById("zonaCarpetas")) pintarManuales();
+}
+
+/* ============================================================
+   MOVER Y DUPLICAR UN DOCUMENTO
+   Ale, tras la demo: "poder mover docs a las distintas carpetas o
+   duplicarlos". Mover es lo que evita tener que regrabar cuando el manual
+   nació en la sección equivocada; duplicar es lo que usan cuando dos
+   máquinas hacen casi lo mismo y solo cambian dos pasos.
+   ============================================================ */
+function abrirAcciones(id){
+  const m = MANUALES.find(function(x){ return x.id === id; });
+  if (!m) return;
+  abrirHoja(m.titulo,
+    (m.familia === "maquina" ? "Carpeta: Máquinas" : "Carpeta: " + m.seccion) +
+    " · " + m.autor,
+    [
+      {ic:"📁", t:"Mover a otra carpeta",
+       s:"Cambia dónde se guarda, no lo que dice.", f:function(){ moverManual(id); }},
+      {ic:"⧉", t:"Duplicar",
+       s:"Una copia editable, sin firmar, en la misma carpeta.", f:function(){ duplicarManual(id); }},
+      {ic:"🗑", t:"Borrar", clase:"roja",
+       s:"Va a la papelera.", f:function(){ pedirBorrado("manual", id); }}
+    ]);
+}
+
+function moverManual(id){
+  const m = MANUALES.find(function(x){ return x.id === id; });
+  if (!m) return;
+  const ops = [];
+  if (m.familia !== "maquina"){
+    ops.push({ic:"⚙", t:"Máquinas",
+      s:"Ojo: deja de ser un manual de proceso y pasa a ser guía de máquina.",
+      f:function(){ confirmarFamilia(m); }});
+  }
+  SECCIONES.forEach(function(sec){
+    const aqui = m.familia === "proceso" && m.seccion === sec;
+    ops.push({ic:"📁", t:sec,
+      clase: aqui ? "sel" : "",
+      s: aqui ? "Está aquí ahora" : manualesDe(sec).length + " dentro",
+      f: aqui ? function(){}
+              : (m.familia === "maquina"
+                  ? function(){ confirmarProceso(m, sec); }
+                  : function(){ aplicarMovimiento(m, "proceso", sec); })});
+  });
+  ops.push({ic:"+", t:"Carpeta nueva…", s:"Crearla y mover el documento ahí",
+    f:function(){ nuevaCarpetaYMover(m); }});
+  abrirHoja("¿A dónde lo movemos?", m.titulo, ops);
+}
+
+function nuevaCarpetaYMover(m){
+  pedirTexto("Nueva carpeta", "Se crea y el documento se mueve ahí de una vez.",
+    "", "Crear y mover", function(v){
+      if (!v){ aviso("La carpeta necesita un nombre."); return; }
+      const ya = SECCIONES.find(function(x){ return x.toLowerCase() === v.toLowerCase(); });
+      if (!ya) SECCIONES.push(v);
+      aplicarMovimiento(m, "proceso", ya || v);
+    });
+}
+
+/* Cambiar de familia no es mover de sitio: cambia lo que ES el documento
+   (y su código IT-PROC / IT-MAQ). Por eso esto pregunta y lo otro no. */
+function confirmarFamilia(m){
+  preguntar("¿Convertirlo en guía de máquina?",
+    "Un manual de proceso cuenta cómo se hace algo; una guía de máquina, cómo funciona un equipo. " +
+    "Cambia el tipo de documento y su código (" + (m.codigo || "—") + ") deja de encajar: " +
+    "hay que revisarlo antes de aprobarlo.",
+    "Moverlo igualmente", function(){
+      m.familia = "maquina";
+      m.tipoTxt = "Guía de funcionamiento de máquina";
+      const h = m.huecosDoc || [];
+      if (h.indexOf("Código de documento (cambió de tipo)") < 0) h.push("Código de documento (cambió de tipo)");
+      m.huecosDoc = h;
+      if (m.estado === "aprobado") m.estado = "revisar";
+      apuntarCambio(m, "Movido a Máquinas: pasa a ser guía de máquina.");
+      EDICIONES.guardar(m);
+      repintarTrasMover(m, "Máquinas");
+    });
+}
+
+/* Sacar una guía de la carpeta Máquinas no es cambiarla de sitio: esa guía es
+   la que abre el QR pegado en la máquina y la que el auditor busca delante de
+   ella. Por eso se avisa y se suelta el vínculo con la máquina. */
+function confirmarProceso(m, sec){
+  const enganchada = MAQUINAS.filter(function(q){ return q.manualId === m.id; });
+  preguntar("¿Sacarlo de Máquinas?",
+    "Deja de ser guía de máquina y pasa a ser manual de proceso, en " + sec + ". " +
+    (enganchada.length
+      ? "El QR de " + enganchada.map(function(q){ return q.nombre; }).join(" y ") +
+        " se queda sin guía hasta que le pongas otra."
+      : "Ninguna máquina lo tiene enganchado, así que ningún QR se queda colgado."),
+    "Moverlo igualmente", function(){
+      enganchada.forEach(function(q){
+        q.manualId = null;
+        if ((q.procesos || []).indexOf(m.id) < 0) (q.procesos = q.procesos || []).push(m.id);
+      });
+      aplicarMovimiento(m, "proceso", sec);
+      pintarMaquinas();
+    });
+}
+
+function aplicarMovimiento(m, familia, sec){
+  const antes = m.familia === "maquina" ? "Máquinas" : m.seccion;
+  m.familia = familia;
+  m.seccion = sec;
+  if (familia === "proceso" && m.tipoTxt === "Guía de funcionamiento de máquina")
+    m.tipoTxt = "Manual de uso del proceso";
+  apuntarCambio(m, "Movido de " + antes + " a " + sec + ".");
+  EDICIONES.guardar(m);
+  repintarTrasMover(m, sec);
+}
+
+function repintarTrasMover(m, destino){
+  repintarCarpetas(); pintarPanel();
+  /* si el movimiento vacía la carpeta abierta, hay que repintarla */
+  const tit = document.getElementById("tituloCarpeta");
+  if (tit && document.getElementById("p-carpeta").classList.contains("activa")){
+    const t = tit.textContent;
+    if (t === "Máquinas") abrirFamilia("maquina"); else abrirCarpeta(t);
+  }
+  aviso(m.titulo + " → " + destino + ".");
+}
+
+let nCopias = 0;
+function duplicarManual(id){
+  const m = MANUALES.find(function(x){ return x.id === id; });
+  if (!m) return;
+  const copia = JSON.parse(JSON.stringify(m));
+  copia.id = "cp" + (++nCopias) + "-" + m.id;
+  copia.titulo = m.titulo + " (copia)";
+  copia.autor = usuario ? usuario.nombre : m.autor;
+  copia.fecha = hoy();
+  copia.edicion = 1;
+  copia.cambios = [];
+  copia.comentario = undefined;
+  /* una copia no nace firmada: en ISO la aprobación es de un documento
+     concreto, no se hereda al copiarlo */
+  copia.estado = (copia.pasos || []).some(function(p){ return p.falta; }) ||
+                 (copia.huecosDoc || []).length ? "faltan" : "revisar";
+  apuntarCambio(copia, "Copia de " + m.titulo + ".");
+  MANUALES.push(copia);
+  repintarCarpetas(); pintarPanel();
+  const donde = copia.familia === "maquina" ? "Máquinas" : copia.seccion;
+  aviso("Copia creada en " + donde + ".");
+  volverA = document.querySelector(".pantalla.activa").id;
+  abrirManual(copia.id);
 }
 
 /* ============================================================
@@ -3131,18 +3600,77 @@ function quitarSeccion(sec){
    plantillas, logos, tipografía, idiomas, color corporativo".
    ============================================================ */
 let MARCA = {nombre:"PEDRO INIESTA S.A.", color:"#0b0b33", letra:"serif",
-             idioma:"es", logo:null};
-const LETRAS = {serif:"Con remates", sans:"Sin remates", mono:"De máquina de escribir"};
+             letraNombre:"", idioma:"es", logo:null};
+const LETRAS = {serif:"Con remates", sans:"Sin remates", mono:"De máquina de escribir",
+                otra:"La vuestra"};
+const PILAS = {serif:'Georgia,"Times New Roman",serif',
+               sans:'system-ui,-apple-system,Arial,sans-serif',
+               mono:'"Courier New",Courier,monospace'};
+/* La letra propia del cliente se pide por su nombre y se deja siempre una de
+   repuesto detrás: si no está instalada, el manual se lee igual. */
+function pilaDeLetra(m){
+  m = m || MARCA;
+  if (m.letra === "otra" && (m.letraNombre || "").trim())
+    return '"' + m.letraNombre.trim().replace(/"/g, "") + '",Georgia,serif';
+  return PILAS[m.letra] || PILAS.serif;
+}
+function nombreLetra(m){
+  m = m || MARCA;
+  return m.letra === "otra" ? ((m.letraNombre || "").trim() || "Sin definir") : LETRAS[m.letra];
+}
+function hexValido(v){ return /^#[0-9a-fA-F]{6}$/.test(v); }
 const IDIOMAS = {es:"Español", ca:"Català", en:"English", fr:"Français",
                  ro:"Română", ar:"العربية"};
 
 function abrirMarca(){
   document.getElementById("mkNombre").value = MARCA.nombre;
   document.getElementById("mkColor").value  = MARCA.color;
+  document.getElementById("mkHex").value    = MARCA.color.toUpperCase();
   document.getElementById("mkLetra").value  = MARCA.letra;
+  document.getElementById("mkLetraOtra").value = MARCA.letraNombre || "";
   document.getElementById("mkIdioma").value = MARCA.idioma;
   document.getElementById("btnLogo").textContent = MARCA.logo ? "CAMBIAR EL LOGO" : "SUBIR EL LOGO";
+  letraCambiada();
   ir("p-marca");
+}
+function colorDesdeRueda(){
+  document.getElementById("mkHex").value = document.getElementById("mkColor").value.toUpperCase();
+  pintarPrevioMarca();
+}
+function colorDesdeCodigo(){
+  const c = document.getElementById("mkHex");
+  let v = (c.value || "").trim();
+  if (v && v[0] !== "#") { v = "#" + v; c.value = v.toUpperCase(); }
+  /* atajo de tres cifras: #0B3 → #00BB33 */
+  if (/^#[0-9a-fA-F]{3}$/.test(v))
+    v = "#" + v[1]+v[1] + v[2]+v[2] + v[3]+v[3];
+  if (hexValido(v)) document.getElementById("mkColor").value = v.toLowerCase();
+  pintarPrevioMarca();
+}
+function letraCambiada(){
+  const otra = document.getElementById("mkLetra").value === "otra";
+  document.getElementById("campoLetraOtra").style.display = otra ? "" : "none";
+  document.getElementById("pistaLetraOtra").style.display = otra ? "" : "none";
+  pintarPrevioMarca();
+}
+/* Vista previa: el mismo trozo de cabecera que lleva el documento, con el
+   color y la letra que se están eligiendo. Es lo único que contesta a la
+   pregunta de la demo: "¿esto va a salir con lo nuestro o con lo vuestro?" */
+function pintarPrevioMarca(){
+  const caja = document.getElementById("prevMarca");
+  if (!caja) return;
+  const hex = document.getElementById("mkHex").value.trim();
+  const color = hexValido(hex) ? hex : document.getElementById("mkColor").value;
+  const letra = pilaDeLetra({letra: document.getElementById("mkLetra").value,
+                             letraNombre: document.getElementById("mkLetraOtra").value});
+  const nombre = (document.getElementById("mkNombre").value || MARCA.nombre).toUpperCase();
+  caja.style.fontFamily = letra;
+  caja.innerHTML =
+    '<div class="cab-prev" style="background:' + color + '">' +
+      '<span>' + esc(nombre) + '</span><span>Edición: 01</span></div>' +
+    '<div class="cuerpo-prev"><b>PRENSA DE MOLDEADO</b>' +
+      'SECCIÓN: Moldeado · Código: IT-MAQ-105<br>' +
+      '1. Interruptor general — palanca roja del panel frontal.</div>';
 }
 function logoElegido(inp){
   const f = inp.files && inp.files[0];
@@ -3152,17 +3680,30 @@ function logoElegido(inp){
   inp.value = "";
 }
 function guardarMarca(){
+  const hex = (document.getElementById("mkHex").value || "").trim();
+  if (hex && !hexValido(hex)){
+    aviso("Ese código de color no vale. Tiene que ser #RRGGBB, como #0B0B33.");
+    return;
+  }
+  const letra = document.getElementById("mkLetra").value;
+  const nombreLet = (document.getElementById("mkLetraOtra").value || "").trim();
+  if (letra === "otra" && !nombreLet){
+    aviso("Escribe el nombre de vuestra tipografía.");
+    return;
+  }
   MARCA.nombre = (document.getElementById("mkNombre").value || "").trim() || MARCA.nombre;
-  MARCA.color  = document.getElementById("mkColor").value;
-  MARCA.letra  = document.getElementById("mkLetra").value;
+  MARCA.color  = hexValido(hex) ? hex.toLowerCase() : document.getElementById("mkColor").value;
+  MARCA.letra  = letra;
+  MARCA.letraNombre = nombreLet;
   MARCA.idioma = document.getElementById("mkIdioma").value;
   pintarMarca();
-  aviso("Guardado. Los manuales salen ya con esto.");
+  aviso("Guardado: " + MARCA.color.toUpperCase() + " · " + nombreLetra());
   raiz("p-fabrica");
 }
 function pintarMarca(){
   const e = document.getElementById("subMarca");
-  if (e) e.textContent = MARCA.nombre + " · " + LETRAS[MARCA.letra] + " · " + IDIOMAS[MARCA.idioma];
+  if (e) e.textContent = MARCA.nombre + " · " + MARCA.color.toUpperCase() +
+    " · " + nombreLetra() + " · " + IDIOMAS[MARCA.idioma];
 }
 
 /* ---------------- repositorio ---------------- */
@@ -3173,14 +3714,20 @@ function chipEstado(m){
   return '<span class="chip rev">Pendiente de aprobar</span>';
 }
 function tarjetaManual(m){
+  /* El ⋯ solo lo ve quien puede reorganizar el sistema documental (Calidad).
+     Va dentro de la tarjeta para que viaje con ella al deslizar. */
+  const mas = puedeBorrar()
+    ? `<span class="mas" role="button" tabindex="0" aria-label="Opciones de ${esc(m.titulo)}"
+         onclick="event.stopPropagation();event.preventDefault();abrirAcciones('${m.id}')">⋯</span>`
+    : "";
   return `<div class="desliz" data-borra="manual" data-id="${m.id}">
     <div class="fondo">🗑 Borrar</div>
     <button class="doc tarjeta" onclick="abrirManual('${m.id}')">
     <div class="ic"></div>
-    <div class="tx"><b>${m.titulo}</b>
+    <div class="tx" style="${mas ? "padding-right:34px;" : ""}"><b>${m.titulo}</b>
       <span>${m.seccion} · ${m.autor} · ${m.fecha}</span>
       <span>${chipEstado(m)} <span class="chip vid">▶ ${m.duracion}</span></span>
-    </div></button></div>`;
+    </div>${mas}</button></div>`;
 }
 const RAICES = ["p-panel","p-manuales","p-fabrica"];
 
@@ -3315,12 +3862,17 @@ function pintarManuales(){
     ? `<p class="seccion-tit">Carpetas</p>
        <button class="carpeta" onclick="abrirFamilia('maquina')">
          <div class="cic ${nMaq ? "" : "vacia"}"></div>
-         <div><b>Máquinas</b><span>Guías de funcionamiento · obligatorias para la ISO</span></div>
+         <div style="flex:1;min-width:0"><b>Máquinas</b><span>Guías de funcionamiento · obligatorias para la ISO</span></div>
          <div class="cuenta ${nMaq ? "" : "cero"}">${nMaq}</div></button>
        <button class="carpeta" onclick="abrirFamilia('proceso')">
          <div class="cic ${nPro ? "" : "vacia"}"></div>
-         <div><b>Procesos físicos</b><span>Cómo se hace cada cosa, por sección</span></div>
-         <div class="cuenta ${nPro ? "" : "cero"}">${nPro}</div></button>`
+         <div style="flex:1;min-width:0"><b>Procesos físicos</b><span>Cómo se hace cada cosa, por sección</span></div>
+         <div class="cuenta ${nPro ? "" : "cero"}">${nPro}</div></button>
+       <p class="seccion-tit">Carpetas de procesos</p>
+       ${SECCIONES.map(sec => filaCarpeta(sec, true)).join("")}
+       ${botonNuevaCarpeta()}
+       <p class="pista">Toca el ✎ para cambiar el nombre de una carpeta o quitarla.
+       El ⋯ de cada documento lo mueve o lo duplica.</p>`
     : "";
 }
 
@@ -3345,17 +3897,13 @@ function abrirFamilia(f){
 }
 
 function pintarSecciones(){
-  document.getElementById("listaSecciones").innerHTML = SECCIONES.map(s => {
-    const n = MANUALES.filter(m => m.familia === "proceso" && m.seccion === s).length;
-    return `<button class="carpeta" onclick="abrirCarpeta('${s}')">
-      <div class="cic ${n ? "" : "vacia"}"></div>
-      <div><b>${s}</b><span>${n ? n + (n===1?" manual":" manuales") : "Sin manuales todavía"}</span></div>
-      <div class="cuenta ${n ? "" : "cero"}">${n}</div></button>`;
-  }).join("");
+  const editable = puedeBorrar();
+  document.getElementById("listaSecciones").innerHTML =
+    SECCIONES.map(sec => filaCarpeta(sec, editable)).join("") +
+    (editable ? botonNuevaCarpeta() : "");
   const pie = document.getElementById("pieSecciones");
-  if (pie) pie.innerHTML = puedeBorrar()
-    ? '<div style="height:14px"></div><button class="btn btn-blanco btn-chico" ' +
-      'onclick="abrirSecciones()">AÑADIR O QUITAR SECCIONES</button>' : "";
+  if (pie) pie.innerHTML = editable
+    ? '<p class="pista">Toca el ✎ de una carpeta para cambiarle el nombre o quitarla.</p>' : "";
 }
 
 function abrirManuales(){ filtro = "todos"; volverA = "p-manuales"; pintarManuales(); ir("p-manuales"); }
@@ -4895,6 +5443,7 @@ pintarSubPapelera();
 EDICIONES.aplicar();
 pintarPanel();
 recuperarTrabajo();
+dejarEstado();   /* deja el primer estado en la pila: sin esto, el botón atrás de Android sale de la app */
 </script>
 
 
