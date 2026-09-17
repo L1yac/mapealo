@@ -1785,10 +1785,10 @@
         <p class="ayuda" style="margin-bottom:12px;">
           Así queda el manual en papel, en el formato de vuestro sistema de calidad.
         </p>
+        <div id="accionesDoc"></div>
+        <div style="height:14px;"></div>
         <div id="mHojas"></div>
         <div style="height:12px;"></div>
-        <div id="accionesDoc"></div>
-        <div style="height:9px;"></div>
         <button class="btn btn-blanco btn-chico" onclick="regrabar(manualAbierto.id)">
           ACTUALIZAR CON UNA GRABACIÓN NUEVA</button>
       </div>
@@ -4551,6 +4551,8 @@ function abrirManual(id){
     ? `<a class="btn btn-marca btn-chico" href="${m.pdf}" download
          style="text-decoration:none">⤓ DESCARGAR EL PDF</a>
        <div style="height:9px;"></div>
+       <button class="btn btn-blanco btn-chico" onclick="volcarAExcel()">⊞ VOLCAR A EXCEL</button>
+       <div style="height:9px;"></div>
        <a class="btn btn-blanco btn-chico" id="correoDoc" href="#"
           style="text-decoration:none">✉ ENVIARLO POR CORREO</a>
        <div style="height:9px;"></div>
@@ -4559,6 +4561,8 @@ function abrirManual(id){
        <button class="btn btn-blanco btn-chico" onclick="abrirCartel()">QR PARA PEGAR EN LA MÁQUINA</button>`
     : `<div class="hueco-av"><b>Todavía no hay PDF</b>
          Se genera cuando estén rellenos los datos que faltan.</div>
+       <button class="btn btn-blanco btn-chico" onclick="volcarAExcel()">⊞ VOLCAR A EXCEL</button>
+       <div style="height:9px;"></div>
        <button class="btn btn-blanco btn-chico" onclick="abrirCartel()">QR PARA PEGAR EN LA MÁQUINA</button>`;
   if (m.pdf && document.getElementById("correoDoc")){
     const asunto = m.tipoTxt + ": " + m.titulo;
@@ -4575,7 +4579,7 @@ function abrirManual(id){
     `<div class="avisovivo">✎ <span>Este documento se escribe solo con lo que hay en los pasos.
        Si corriges un paso, aquí cambia.</span></div>
      <div class="doc-acciones">
-       <button class="pri" onclick="imprimirDocumento()">GUARDAR EN PDF</button>
+       ${m.pdf ? "" : '<button class="pri" onclick="imprimirDocumento()">IMPRIMIR ESTA VISTA</button>'}
        <button onclick="verTab('doc')">CORREGIR ALGO</button>
      </div>` + documentoHTML(m);
 
@@ -4708,6 +4712,264 @@ function reenviar(){
 }
 
 /* ---------------- edición ---------------- */
+
+/* ==========================================================================
+   VOLCADO A EXCEL (.xlsx)
+   --------------------------------------------------------------------------
+   Petición nº1 de Miguel Pedreño (Resp. Calidad) el 02/09/2026: "volcarlo a
+   Excel, súper importante". Antes salía un CSV: se abría, pero sin formato.
+   Ahora sale un .xlsx de verdad, escrito aquí mismo sin librerías (un zip sin
+   comprimir con los XML de Office), con el mismo aspecto que el documento:
+   cabecera, tabla de pasos con anchos y texto ajustado, filtro y fila fija,
+   y los datos que faltan sombreados en amarillo.
+   Esto es la ESTRUCTURA COMÚN (cabecera, pasos, huecos, historial). Cuando
+   llegue el Excel de la fábrica se mapean estas columnas a las suyas; no se
+   clona su fichero, que solo valdría para ellos.
+   ========================================================================== */
+function minutoDe(s){
+  const n = Number(s) || 0;
+  return Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0");
+}
+
+/* --- zip sin compresión (método STORE): cabecera local + directorio central --- */
+const CRC_TABLA = (function(){
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++){
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(b){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < b.length; i++) c = CRC_TABLA[(c ^ b[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+function zipStore(ficheros){          // ficheros: [{nombre, texto}]
+  const enc = new TextEncoder(), partes = [], central = [];
+  let desplaz = 0;
+  const u16 = v => [v & 255, (v >>> 8) & 255];
+  const u32 = v => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+  ficheros.forEach(f => {
+    const nombre = enc.encode(f.nombre), datos = enc.encode(f.texto), crc = crc32(datos);
+    const comun = [...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21),
+                   ...u32(crc), ...u32(datos.length), ...u32(datos.length),
+                   ...u16(nombre.length)];
+    const local = new Uint8Array([0x50,0x4B,3,4, ...comun, ...u16(0), ...nombre]);
+    partes.push(local, datos);
+    central.push(new Uint8Array([0x50,0x4B,1,2, ...u16(20), ...comun, ...u16(0), ...u16(0),
+                                 ...u16(0), ...u16(0), ...u32(0), ...u32(desplaz), ...nombre]));
+    desplaz += local.length + datos.length;
+  });
+  const tamCentral = central.reduce((a, c) => a + c.length, 0);
+  const fin = new Uint8Array([0x50,0x4B,5,6, ...u16(0), ...u16(0), ...u16(ficheros.length),
+                              ...u16(ficheros.length), ...u32(tamCentral), ...u32(desplaz), ...u16(0)]);
+  return new Blob([...partes, ...central, fin],
+    {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+
+/* --- hoja: filas de celdas {v, s} (s = índice de estilo) --- */
+function xmlEsc(t){
+  return String(t == null ? "" : t).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,"");
+}
+function colLetra(i){ let s = ""; i++; while (i > 0){ const r = (i - 1) % 26; s = String.fromCharCode(65 + r) + s; i = Math.floor((i - 1) / 26); } return s; }
+function hojaXML(h){
+  // h: {filas:[[{v,s}|null,...]], anchos:[n], fijar:"A2", filtro:"A1:F5", unir:["A1:F1"], altos:{fila:pt}}
+  let x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' +
+    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
+    '<sheetViews><sheetView workbookViewId="0" showGridLines="0"' + (h.fijar ? '' : '>') ;
+  if (h.fijar){
+    const fila = parseInt(h.fijar.replace(/\D/g, ""), 10);
+    x += '><pane ySplit="' + (fila - 1) + '" topLeftCell="' + h.fijar + '" activePane="bottomLeft" state="frozen"/>';
+  }
+  x += '</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>';
+  if (h.anchos && h.anchos.length){
+    x += '<cols>' + h.anchos.map((w, i) => '<col min="' + (i+1) + '" max="' + (i+1) + '" width="' + w + '" customWidth="1"/>').join("") + '</cols>';
+  }
+  x += '<sheetData>';
+  h.filas.forEach((fila, r) => {
+    const alto = h.altos && h.altos[r + 1];
+    x += '<row r="' + (r+1) + '"' + (alto ? ' ht="' + alto + '" customHeight="1"' : '') + '>';
+    fila.forEach((c, i) => {
+      if (c == null) return;
+      const ref = colLetra(i) + (r+1), s = c.s ? ' s="' + c.s + '"' : '';
+      if (typeof c.v === "number") x += '<c r="' + ref + '"' + s + '><v>' + c.v + '</v></c>';
+      else if (c.v === "" || c.v == null) x += '<c r="' + ref + '"' + s + '/>';
+      else x += '<c r="' + ref + '"' + s + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(c.v) + '</t></is></c>';
+    });
+    x += '</row>';
+  });
+  x += '</sheetData>';
+  if (h.filtro) x += '<autoFilter ref="' + h.filtro + '"/>';
+  if (h.unir && h.unir.length) x += '<mergeCells count="' + h.unir.length + '">' + h.unir.map(u => '<mergeCell ref="' + u + '"/>').join("") + '</mergeCells>';
+  x += '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
+       '<pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/>' +
+       '</worksheet>';
+  return x;
+}
+
+/* --- estilos: índices que usan las celdas ---
+   0 normal · 1 título · 2 subtítulo gris · 3 cabecera de tabla (navy, blanco, negrita)
+   4 etiqueta negrita con borde · 5 texto con borde y ajuste · 6 amarillo (falta dato)
+   7 número centrado con borde · 8 minuto monoespaciado centrado · 9 aviso ámbar en negrita
+   10 enlace azul subrayado con borde */
+const ESTILOS_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+'<fonts count="7">' +
+ '<font><sz val="10"/><name val="Arial"/></font>' +
+ '<font><b/><sz val="16"/><color rgb="FF0B0B33"/><name val="Arial"/></font>' +
+ '<font><sz val="10"/><color rgb="FF5A5F7D"/><name val="Arial"/></font>' +
+ '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font>' +
+ '<font><b/><sz val="10"/><color rgb="FF0B0B33"/><name val="Arial"/></font>' +
+ '<font><i/><sz val="10"/><color rgb="FF7A5200"/><name val="Arial"/></font>' +
+ '<font><u/><sz val="10"/><color rgb="FF2A66DB"/><name val="Arial"/></font>' +
+'</fonts>' +
+'<fills count="5">' +
+ '<fill><patternFill patternType="none"/></fill>' +
+ '<fill><patternFill patternType="gray125"/></fill>' +
+ '<fill><patternFill patternType="solid"><fgColor rgb="FF0B0B33"/><bgColor indexed="64"/></patternFill></fill>' +
+ '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF2B3"/><bgColor indexed="64"/></patternFill></fill>' +
+ '<fill><patternFill patternType="solid"><fgColor rgb="FFF1F1F8"/><bgColor indexed="64"/></patternFill></fill>' +
+'</fills>' +
+'<borders count="2">' +
+ '<border><left/><right/><top/><bottom/><diagonal/></border>' +
+ '<border><left style="thin"><color rgb="FFB8B8CC"/></left><right style="thin"><color rgb="FFB8B8CC"/></right>' +
+ '<top style="thin"><color rgb="FFB8B8CC"/></top><bottom style="thin"><color rgb="FFB8B8CC"/></bottom><diagonal/></border>' +
+'</borders>' +
+'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+'<cellXfs count="11">' +
+ '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+ '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment vertical="center"/></xf>' +
+ '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"><alignment vertical="center" wrapText="1"/></xf>' +
+ '<xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>' +
+ '<xf numFmtId="0" fontId="4" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf>' +
+ '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf>' +
+ '<xf numFmtId="0" fontId="5" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"><alignment vertical="top" wrapText="1"/></xf>' +
+ '<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="top"/></xf>' +
+ '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"><alignment horizontal="center" vertical="top"/></xf>' +
+ '<xf numFmtId="0" fontId="5" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"><alignment vertical="center" wrapText="1"/></xf>' +
+ '<xf numFmtId="0" fontId="6" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"><alignment vertical="top"/></xf>' +
+'</cellXfs>' +
+'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+'</styleSheet>';
+
+function libroXLSX(hojas){            // hojas: [{nombre, ...hojaXML}]
+  const f = [];
+  f.push({nombre: "[Content_Types].xml", texto:
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+    hojas.map((h, i) => '<Override PartName="/xl/worksheets/sheet' + (i+1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join("") +
+    '</Types>'});
+  f.push({nombre: "_rels/.rels", texto:
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+    '</Relationships>'});
+  f.push({nombre: "xl/workbook.xml", texto:
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<sheets>' + hojas.map((h, i) => '<sheet name="' + xmlEsc(h.nombre) + '" sheetId="' + (i+1) + '" r:id="rId' + (i+1) + '"/>').join("") + '</sheets>' +
+    '</workbook>'});
+  f.push({nombre: "xl/_rels/workbook.xml.rels", texto:
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    hojas.map((h, i) => '<Relationship Id="rId' + (i+1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i+1) + '.xml"/>').join("") +
+    '<Relationship Id="rId' + (hojas.length+1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '</Relationships>'});
+  f.push({nombre: "xl/styles.xml", texto: ESTILOS_XML});
+  hojas.forEach((h, i) => f.push({nombre: "xl/worksheets/sheet" + (i+1) + ".xml", texto: hojaXML(h)}));
+  return zipStore(f);
+}
+
+function volcarAExcel(){
+  const m = manualAbierto;
+  if (!m){ aviso("Abre un manual primero."); return; }
+  const T = (v, s) => ({v: v == null ? "" : v, s: s || 0});
+  const pasos = m.pasos || [], huecos = m.huecosDoc || [];
+  const nFaltan = pasos.filter(p => p.falta).length + huecos.length;
+  const hist = (m.historial || []).length ? m.historial
+    : [{edicion: m.edicion || 1, fecha: m.fecha, que: "Edición inicial. Generada a partir de la grabación en planta."}];
+
+  /* ---- Hoja 1: Pasos (lo que Calidad quiere ver primero) ---- */
+  const filasP = [], altos = {};
+  filasP.push([T(m.titulo + " · " + (m.tipoTxt || ""), 1)]);                       altos[1] = 26;
+  filasP.push([T([m.codigo, "Edición " + (m.edicion || 1), m.fecha, m.seccion, m.maquina].filter(Boolean).join("  ·  "), 2)]);
+  filasP.push([T(nFaltan ? "⚠ " + nFaltan + " dato" + (nFaltan > 1 ? "s" : "") + " pendiente" + (nFaltan > 1 ? "s" : "") +
+                  " de confirmar por Calidad (en amarillo)." : "Sin datos pendientes.", nFaltan ? 9 : 2)]);
+  filasP.push([]);
+  const CAB = 5;
+  filasP.push(["Nº", "Paso", "Cómo se hace", "Está bien si", "Minuto", "Falta este dato"].map(c => T(c, 3))); altos[CAB] = 22;
+  /* Una celda va en amarillo si el motor la marcó como hueco o si el texto que
+     hay es un marcador de sitio ("SIN DEFINIR", "—"): en la demo no puede
+     quedar un hueco con el mismo aspecto que un dato bueno. */
+  const vacio = v => { const t = String(v == null ? "" : v).trim();
+                       return t === "" || t === "—" || t === "-" || t.toUpperCase() === "SIN DEFINIR"; };
+  const celda = (v, marcado) => vacio(v) ? T("pendiente de rellenar", 6) : T(v, marcado ? 6 : 5);
+  pasos.forEach((p, i) => {
+    const falta = p.falta ? p.falta.que : "";
+    filasP.push([T(i + 1, 7), T(p.t, 4),
+                 celda(p.d, p.falta && p.falta.campo === "d"),
+                 celda(p.c, p.falta && p.falta.campo === "c"),
+                 T(minutoDe(p.s), 8), T(falta, falta ? 6 : 5)]);
+  });
+  const ultima = CAB + pasos.length;
+  const hojaPasos = {nombre: "Pasos", filas: filasP, anchos: [5, 26, 52, 42, 8, 46],
+                     fijar: "A" + (CAB + 1), filtro: "A" + CAB + ":F" + ultima,
+                     unir: ["A1:F1", "A2:F2", "A3:F3"], altos};
+
+  /* ---- Hoja 2: Documento (cabecera y datos que faltan) ---- */
+  const filasD = [];
+  filasD.push([T("Datos del documento", 1)]);
+  filasD.push([]);
+  [["Título", m.titulo], ["Tipo", m.tipoTxt], ["Código", m.codigo], ["Edición", m.edicion || 1],
+   ["Fecha", m.fecha], ["Sección", m.seccion], ["Máquina", m.maquina], ["Nº de máquina", m.nMaquina],
+   ["Ubicación", m.ubicacion], ["Grabado por", m.autor], ["Duración del vídeo", m.duracion],
+   ["Estado", m.estado === "faltan" ? "Borrador: faltan datos" : (m.estado === "aprobado" ? "Aprobado" : (m.estado || ""))],
+   ["Ficha con el vídeo", m.enlace], ["PDF", m.pdf]].forEach(([k, v]) => {
+     const vacio = v == null || v === "" || v === "—";
+     const enlace = /^https?:\/\//.test(String(v || ""));
+     filasD.push([T(k, 4), T(vacio ? "pendiente de rellenar" : v, vacio ? 6 : (enlace ? 10 : 5))]);
+   });
+  if (huecos.length){
+    filasD.push([]);
+    filasD.push([T("Datos que faltan en el documento", 3), T("", 3)]);
+    huecos.forEach((h, i) => filasD.push([T(i + 1, 7), T(h, 6)]));
+  }
+  const hojaDoc = {nombre: "Documento", filas: filasD, anchos: [24, 70], unir: ["A1:B1"], altos: {1: 26}};
+
+  /* ---- Hoja 3: Historial ---- */
+  const filasH = [[T("Historial de revisiones", 1)], [],
+                  ["Edición", "Fecha", "Comentarios"].map(c => T(c, 3))];
+  hist.forEach(h => filasH.push([T(h.edicion || "", 7), T(h.fecha || "", 8), T(h.que || h.motivo || "", 5)]));
+  const hojaHist = {nombre: "Historial", filas: filasH, anchos: [10, 14, 90], unir: ["A1:C1"], altos: {1: 26, 3: 22}};
+
+  /* El código puede estar sin asignar ("IT-PROC-—"): entonces el nombre sale de
+     la sección y el título, para que dos manuales no bajen con el mismo nombre. */
+  const limpio = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w.-]+/g, "-").replace(/-{2,}/g, "-").replace(/^-|-$/g, "");
+  const codigo = limpio(m.codigo);
+  const base = (codigo && !/-$/.test(String(m.codigo || "").trim()) && !/[—–]/.test(m.codigo || ""))
+    ? codigo
+    : limpio(String(m.titulo || "").toLowerCase().indexOf(String(m.seccion || "zz").toLowerCase()) >= 0
+             ? m.titulo : [m.seccion, m.titulo].filter(Boolean).join("-"));
+  const nombre = (base || "manual") + ".xlsx";
+  const blob = libroXLSX([hojaPasos, hojaDoc, hojaHist]);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  aviso("Excel guardado: " + nombre);
+}
 
 /* ==========================================================================
    EL DOCUMENTO SE GENERA DESDE LOS DATOS
